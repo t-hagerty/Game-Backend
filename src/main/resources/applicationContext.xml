@@ -7,6 +7,10 @@
         <property name="dataSource" ref="dataSource" />
     </bean>
 
+    <bean id="jdbcUserDAO" class="com.example.demo.JDBCUserDAOImpl">
+        <property name="dataSource" ref="dataSource" />
+    </bean>
+
     <bean id="dataSource"
           class="org.springframework.jdbc.datasource.DriverManagerDataSource">
 

@@ -10,6 +10,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import java.sql.Date;
+import java.util.List;
 
 @SpringBootApplication
 public class DemoApplication implements CommandLineRunner
@@ -27,11 +28,26 @@ public class DemoApplication implements CommandLineRunner
 	public void run(String... strings) throws Exception
 	{
 		ConfigurableApplicationContext context = new ClassPathXmlApplicationContext("applicationContext.xml");
-		UserDAO userDAO = (UserDAO) context.getBean("userDAO");
-		User user1 = new User(1, "test", "1234", "test@gmail.com", new Date(1));
-		userDAO.insert(user1);
-		User user2 = userDAO.findById(1);
+		JDBCUserDAO jdbcUserDAO = (JDBCUserDAO) context.getBean("jdbcUserDAO");
+		try
+		{
+			User user1 = new User(1, "test", "1234", "test@gmail.com", new Date(1));
+			jdbcUserDAO.insert(user1);
+		}
+		catch(Exception e)
+		{
+			System.out.println(e.toString());
+		}
+		User user2 = jdbcUserDAO.findById(1);
 		System.out.println(user2);
+
+		List<User> users = jdbcUserDAO.findAll();
+		System.out.println(users);
+
+		System.out.println(jdbcUserDAO.findUserNameById(1));
+        System.out.println(jdbcUserDAO.findEmailById(2));
+        System.out.println(jdbcUserDAO.findDateCreatedById(1));
+
 		context.close();
 	}
 }
