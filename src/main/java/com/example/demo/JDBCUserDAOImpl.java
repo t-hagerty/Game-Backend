@@ -2,6 +2,10 @@ package com.example.demo;
 
 import javax.sql.DataSource;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -12,26 +16,88 @@ import java.util.ArrayList;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
+@Configuration
+@ComponentScan("com.example.demo")
 public class JDBCUserDAOImpl implements JDBCUserDAO
 {
+    @Autowired
     private DataSource dataSource;
     private JdbcTemplate jdbcTemplate;
+
+    @Bean
+    public JDBCUserDAOImpl jdbcUserDAO()
+    {
+        return new JDBCUserDAOImpl();
+    }
 
     public void setDataSource(DataSource dataSource)
     {
         this.dataSource = dataSource;
     }
 
-    public void insert(User user)
+    public Boolean insert(User user)
     {
+        try
+        {
+            String sql = "INSERT INTO USERS " +
+                    "(ID, USERNAME, PASSWORD, EMAIL, DATE_CREATED) VALUES (?, ?, ?, ?, ?)";
 
-        String sql = "INSERT INTO USERS " +
-                "(ID, USERNAME, PASSWORD, EMAIL, DATE_CREATED) VALUES (?, ?, ?, ?, ?)";
+            jdbcTemplate = new JdbcTemplate(dataSource);
 
-        jdbcTemplate = new JdbcTemplate(dataSource);
+            jdbcTemplate.update(sql, new Object[]{user.getId(),
+                    user.getUserName(), user.getPassword(), user.getEmail(), user.getDateCreated()});
+            return true;
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
+    }
 
-        jdbcTemplate.update(sql, new Object[]{user.getId(),
-                user.getUserName(), user.getPassword(), user.getEmail(), user.getDateCreated()});
+    public Boolean insertBatch1(final List<User> users)
+    {
+        try
+        {
+            jdbcTemplate = new JdbcTemplate(dataSource);
+            String sql = "INSERT INTO USERS " +
+                    "(ID, USERNAME, PASSWORD, EMAIL, DATE_CREATED) VALUES (?, ?, ?, ?, ?)";
+
+            jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter()
+            {
+                public void setValues(PreparedStatement ps, int i) throws SQLException
+                {
+                    User user = users.get(i);
+                    ps.setLong(1, user.getId());
+                    ps.setString(2, user.getUserName());
+                    ps.setString(3, user.getPassword());
+                    ps.setString(4, user.getEmail());
+                    ps.setDate(5, user.getDateCreated() );
+                }
+
+                public int getBatchSize()
+                {
+                    return users.size();
+                }
+            });
+            return true;
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
+    }
+
+    public Boolean insertBatch2(final String sql)
+    {
+        try
+        {
+            jdbcTemplate.batchUpdate(sql);
+            return true;
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
     }
 
     @SuppressWarnings({"unchecked"})
@@ -68,6 +134,28 @@ public class JDBCUserDAOImpl implements JDBCUserDAO
         return users;
     }
 
+    @SuppressWarnings("rawtypes")
+    public List<User> findRange(long startId, long endId)
+    {
+        jdbcTemplate = new JdbcTemplate(dataSource);
+        String sql = "SELECT * FROM USERS WHERE ID BETWEEN ? AND ?";
+
+        List<User> users = new ArrayList<User>();
+
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, startId, endId);
+        for (Map row : rows)
+        {
+            User user = new User(Long.parseLong(String.valueOf(row.get("ID"))),
+                    (String) row.get("USERNAME"),
+                    (String) row.get("PASSWORD"),
+                    (String) row.get("EMAIL"),
+                    (Date) row.get("DATE_CREATED"));
+            users.add(user);
+        }
+
+        return users;
+    }
+
     public String findUserNameById(long id)
     {
         String sql = "SELECT USERNAME FROM USERS WHERE ID = ?";
@@ -86,33 +174,39 @@ public class JDBCUserDAOImpl implements JDBCUserDAO
         return jdbcTemplate.queryForObject(sql, new Object[]{id}, Date.class);
     }
 
-    public void insertBatch1(final List<User> users)
+    public Boolean updateEntry(User user, long id)
     {
+        String sql = "UPDATE USERS SET USERNAME = ?, PASSWORD = ?, EMAIL = ?, DATE_CREATED = ? WHERE ID = ?";
+
         jdbcTemplate = new JdbcTemplate(dataSource);
-        String sql = "INSERT INTO USERS " +
-                "(ID, USERNAME, PASSWORD, EMAIL, DATE_CREATED) VALUES (?, ?, ?, ?, ?)";
 
-        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter()
+        try
         {
-            public void setValues(PreparedStatement ps, int i) throws SQLException
-            {
-                User user = users.get(i);
-                ps.setLong(1, user.getId());
-                ps.setString(2, user.getUserName());
-                ps.setString(3, user.getPassword());
-                ps.setString(4, user.getEmail());
-                ps.setDate(5, user.getDateCreated() );
-            }
-
-            public int getBatchSize()
-            {
-                return users.size();
-            }
-        });
+            jdbcTemplate.update(sql, new Object[]{user.getUserName(),
+                    user.getPassword(), user.getEmail(), user.getDateCreated(), id});
+            return true;
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
     }
 
-    public void insertBatch2(final String sql)
+    public Boolean deleteById(long id)
     {
-        jdbcTemplate.batchUpdate(sql);
+        try
+        {
+            jdbcTemplate = new JdbcTemplate(dataSource);
+            String sql = "DELETE * FROM LEVELS WHERE AUTHOR_ID = ?";
+            jdbcTemplate.update(sql, id);
+            sql = "DELETE * FROM USERS WHERE ID = ?";
+            jdbcTemplate.update(sql, id);
+
+            return true;
+        }
+        catch(Exception e)
+        {
+            return false;
+        }
     }
 }
