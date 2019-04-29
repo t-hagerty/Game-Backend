@@ -118,20 +118,9 @@ public class JDBCUserDAOImpl implements JDBCUserDAO
         jdbcTemplate = new JdbcTemplate(dataSource);
         String sql = "SELECT * FROM USERS";
 
-        List<User> users = new ArrayList<User>();
-
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql);
-        for (Map row : rows)
-        {
-            User user = new User(Long.parseLong(String.valueOf(row.get("ID"))),
-                    (String) row.get("USERNAME"),
-                    (String) row.get("PASSWORD"),
-                    (String) row.get("EMAIL"),
-                    (Date) row.get("DATE_CREATED"));
-            users.add(user);
-        }
 
-        return users;
+        return mapResultListToUsers(rows);
     }
 
     @SuppressWarnings("rawtypes")
@@ -140,9 +129,14 @@ public class JDBCUserDAOImpl implements JDBCUserDAO
         jdbcTemplate = new JdbcTemplate(dataSource);
         String sql = "SELECT * FROM USERS WHERE ID BETWEEN ? AND ?";
 
-        List<User> users = new ArrayList<User>();
-
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, startId, endId);
+
+        return mapResultListToUsers(rows);
+    }
+
+    private List<User> mapResultListToUsers(List<Map<String, Object>> rows)
+    {
+        List<User> users = new ArrayList<User>();
         for (Map row : rows)
         {
             User user = new User(Long.parseLong(String.valueOf(row.get("ID"))),
@@ -152,7 +146,6 @@ public class JDBCUserDAOImpl implements JDBCUserDAO
                     (Date) row.get("DATE_CREATED"));
             users.add(user);
         }
-
         return users;
     }
 

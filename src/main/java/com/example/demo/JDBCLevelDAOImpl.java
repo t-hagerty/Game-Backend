@@ -1,5 +1,9 @@
 package com.example.demo;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -13,26 +17,87 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@Configuration
+@ComponentScan("com.example.demo")
 public class JDBCLevelDAOImpl implements JDBCLevelDAO
 {
+    @Autowired
     private DataSource dataSource;
     private JdbcTemplate jdbcTemplate;
+
+    @Bean
+    public JDBCLevelDAOImpl jdbcLevelDAO()
+    {
+        return new JDBCLevelDAOImpl();
+    }
 
     public void setDataSource(DataSource dataSource)
     {
         this.dataSource = dataSource;
     }
 
-    public void insert(Level level)
+    public Boolean insert(Level level)
     {
+        try
+        {
+            String sql = "INSERT INTO LEVELS " +
+                    "(ID, AUTHOR_ID, NAME, DATE_SUBMITTED, RATING, PERCENT_WON, LEVEL_MAP) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-        String sql = "INSERT INTO LEVELS " +
-                "(ID, AUTHOR_ID, NAME, DATE_SUBMITTED, RATING, PERCENT_WON, LEVEL_MAP) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            jdbcTemplate = new JdbcTemplate(dataSource);
 
-        jdbcTemplate = new JdbcTemplate(dataSource);
+            jdbcTemplate.update(sql, new Object[]{level.getId(), level.getAuthorId(),
+                    level.getName(), level.getDateSubmitted(), level.getRating(), level.getPercentWon(), level.getLevelMap()});
+            return true;
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
+    }
 
-        jdbcTemplate.update(sql, new Object[]{level.getId(), level.getAuthorId(),
-                level.getName(), level.getDateSubmitted(), level.getRating(), level.getPercentWon(), level.getLevelMap()});
+    public Boolean insertBatch1(final List<Level> levels)
+    {
+        try
+        {
+            jdbcTemplate = new JdbcTemplate(dataSource);
+            String sql = "INSERT INTO LEVELS " +
+                    "(ID, AUTHOR_ID, NAME, DATE_SUBMITTED, RATING, PERCENT_WON, LEVEL_MAP) VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+            jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+                public void setValues(PreparedStatement ps, int i) throws SQLException {
+                    Level level = levels.get(i);
+                    ps.setLong(1, level.getId());
+                    ps.setLong(2, level.getAuthorId());
+                    ps.setString(3, level.getName());
+                    ps.setDate(4, level.getDateSubmitted());
+                    ps.setFloat(5, level.getRating());
+                    ps.setFloat(6, level.getPercentWon());
+                    ps.setBlob(7, level.getLevelMap());
+                }
+
+                public int getBatchSize() {
+                    return levels.size();
+                }
+            });
+            return true;
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
+    }
+
+    public Boolean insertBatch2(final String sql)
+    {
+        try
+        {
+            jdbcTemplate.batchUpdate(sql);
+            return true;
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
     }
 
     @SuppressWarnings({"unchecked"})
@@ -48,14 +113,45 @@ public class JDBCLevelDAOImpl implements JDBCLevelDAO
     }
 
     @SuppressWarnings("rawtypes")
-    public List<Level> findAll() throws SQLException
+    public List<Level> findAll()
     {
-        jdbcTemplate = new JdbcTemplate(dataSource);
-        String sql = "SELECT * FROM LEVELS";
+        try
+        {
+            jdbcTemplate = new JdbcTemplate(dataSource);
+            String sql = "SELECT * FROM LEVELS";
 
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql);
+
+            return mapResultListToLevels(rows);
+        }
+        catch(SQLException e)
+        {
+            return new ArrayList<Level>();
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    public List<Level> findRange(long startId, long endId)
+    {
+        try
+        {
+            jdbcTemplate = new JdbcTemplate(dataSource);
+            String sql = "SELECT * FROM LEVELS WHERE ID BETWEEN ? AND ?";
+
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, startId, endId);
+
+            return mapResultListToLevels(rows);
+        }
+        catch(SQLException e)
+        {
+            return new ArrayList<Level>();
+        }
+    }
+
+    private List<Level> mapResultListToLevels(List<Map<String, Object>> rows) throws SQLException
+    {
         List<Level> levels = new ArrayList<Level>();
 
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql);
         for (Map row : rows)
         {
             byte[] bytes = (byte[]) row.get("LEVEL_MAP");
@@ -69,7 +165,6 @@ public class JDBCLevelDAOImpl implements JDBCLevelDAO
                     b);
             levels.add(level);
         }
-
         return levels;
     }
 
@@ -109,35 +204,37 @@ public class JDBCLevelDAOImpl implements JDBCLevelDAO
         return jdbcTemplate.queryForObject(sql, new Object[]{id}, Blob.class);
     }
 
-    public void insertBatch1(final List<Level> levels)
+    public Boolean updateEntry(Level level, long id)
     {
+        String sql = "UPDATE LEVELS SET AUTHOR_ID = ?, NAME = ?, DATE_SUBMITTED = ?, RATING = ?, PERCENT_WON = ?, LEVEL_MAP = ? WHERE ID = ?";
+
         jdbcTemplate = new JdbcTemplate(dataSource);
-        String sql = "INSERT INTO LEVELS " +
-                "(ID, AUTHOR_ID, NAME, DATE_SUBMITTED, RATING, PERCENT_WON, LEVEL_MAP) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter()
+        try
         {
-            public void setValues(PreparedStatement ps, int i) throws SQLException
-            {
-                Level level = levels.get(i);
-                ps.setLong(1, level.getId());
-                ps.setLong(2, level.getAuthorId());
-                ps.setString(3, level.getName());
-                ps.setDate(4, level.getDateSubmitted());
-                ps.setFloat(5, level.getRating() );
-                ps.setFloat(6, level.getPercentWon() );
-                ps.setBlob(7, level.getLevelMap() );
-            }
-
-            public int getBatchSize()
-            {
-                return levels.size();
-            }
-        });
+            jdbcTemplate.update(sql, new Object[]{level.getAuthorId(),
+                    level.getName(), level.getDateSubmitted(), level.getRating(), level.getPercentWon(), level.getLevelMap(), id});
+            return true;
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
     }
 
-    public void insertBatch2(final String sql)
+    public Boolean deleteById(long id)
     {
-        jdbcTemplate.batchUpdate(sql);
+        try
+        {
+            jdbcTemplate = new JdbcTemplate(dataSource);
+            String sql = "DELETE * FROM LEVELS WHERE ID = ?";
+            jdbcTemplate.update(sql, id);
+
+            return true;
+        }
+        catch(Exception e)
+        {
+            return false;
+        }
     }
 }

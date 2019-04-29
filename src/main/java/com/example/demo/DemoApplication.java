@@ -21,9 +21,7 @@ public class DemoApplication implements CommandLineRunner
 
 	public static void main(String args[])
 	{
-        ConfigurableApplicationContext context = new ClassPathXmlApplicationContext("applicationContext.xml");
 		SpringApplication.run(DemoApplication.class, args);
-        context.close();
 	}
 
 	@Override
