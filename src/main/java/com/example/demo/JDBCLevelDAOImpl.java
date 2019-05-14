@@ -1,6 +1,7 @@
 package com.example.demo;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -22,6 +23,7 @@ import java.util.Map;
 public class JDBCLevelDAOImpl implements JDBCLevelDAO
 {
     @Autowired
+    @Qualifier("mysqlDataSource")
     private DataSource dataSource;
     private JdbcTemplate jdbcTemplate;
 
@@ -31,22 +33,17 @@ public class JDBCLevelDAOImpl implements JDBCLevelDAO
         return new JDBCLevelDAOImpl();
     }
 
-    public void setDataSource(DataSource dataSource)
-    {
-        this.dataSource = dataSource;
-    }
-
     public Boolean insert(Level level)
     {
         try
         {
             String sql = "INSERT INTO LEVELS " +
-                    "(ID, AUTHOR_ID, NAME, DATE_SUBMITTED, RATING, PERCENT_WON, LEVEL_MAP) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                    "(ID, AUTHOR_ID, NAME, DATE_SUBMITTED, RATING, PERCENT_WON, LEVEL_MAP, NUMBER_RATINGS, NUMBER_PLAYED) VALUES (NULL, ?, ?, NOW(), ?, ?, ?, ?, ?)";
 
             jdbcTemplate = new JdbcTemplate(dataSource);
 
-            jdbcTemplate.update(sql, new Object[]{level.getId(), level.getAuthorId(),
-                    level.getName(), level.getDateSubmitted(), level.getRating(), level.getPercentWon(), level.getLevelMap()});
+            jdbcTemplate.update(sql, new Object[]{level.getAuthorId(),
+                    level.getName(), level.getRating(), level.getPercentWon(), level.getLevelMap(), level.getNumberRatings(), level.getNumberPlayed()});
             return true;
         }
         catch (Exception e)
@@ -61,7 +58,7 @@ public class JDBCLevelDAOImpl implements JDBCLevelDAO
         {
             jdbcTemplate = new JdbcTemplate(dataSource);
             String sql = "INSERT INTO LEVELS " +
-                    "(ID, AUTHOR_ID, NAME, DATE_SUBMITTED, RATING, PERCENT_WON, LEVEL_MAP) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                    "(ID, AUTHOR_ID, NAME, DATE_SUBMITTED, RATING, PERCENT_WON, LEVEL_MAP, NUMBER_RATINGS, NUMBER_PLAYED) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
             jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
                 public void setValues(PreparedStatement ps, int i) throws SQLException {
@@ -73,6 +70,8 @@ public class JDBCLevelDAOImpl implements JDBCLevelDAO
                     ps.setFloat(5, level.getRating());
                     ps.setFloat(6, level.getPercentWon());
                     ps.setBlob(7, level.getLevelMap());
+                    ps.setLong(8, level.getNumberRatings());
+                    ps.setLong(9, level.getNumberPlayed());
                 }
 
                 public int getBatchSize() {
@@ -162,7 +161,9 @@ public class JDBCLevelDAOImpl implements JDBCLevelDAO
                     (Date) row.get("DATE_SUBMITTED"),
                     (Float) row.get("RATING"),
                     (Float) row.get("PERCENT_WON"),
-                    b);
+                    b,
+                    (Long) row.get("NUMBER_RATINGS"),
+                    (Long) row.get("NUMBER_PLAYED"));
             levels.add(level);
         }
         return levels;
@@ -202,6 +203,18 @@ public class JDBCLevelDAOImpl implements JDBCLevelDAO
     {
         String sql = "SELECT LEVEL_MAP FROM LEVELS WHERE ID = ?";
         return jdbcTemplate.queryForObject(sql, new Object[]{id}, Blob.class);
+    }
+
+    public Long findNumberRatingsById(long id)
+    {
+        String sql = "SELECT NUMBER_RATINGS FROM LEVELS WHERE ID = ?";
+        return jdbcTemplate.queryForObject(sql, new Object[]{id}, Long.class);
+    }
+
+    public Long findNumberPlayedById(long id)
+    {
+        String sql = "SELECT NUMBER_PLAYED FROM LEVELS WHERE ID = ?";
+        return jdbcTemplate.queryForObject(sql, new Object[]{id}, Long.class);
     }
 
     public Boolean updateEntry(Level level, long id)

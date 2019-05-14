@@ -16,7 +16,9 @@ public class LevelRowMapper implements RowMapper<Level>
                 rs.getDate("DATE_SUBMITTED"),
                 rs.getFloat("RATING"),
                 rs.getFloat("PERCENT_WON"),
-                rs.getBlob("LEVEL_MAP"));
+                rs.getBlob("LEVEL_MAP"),
+                rs.getLong("NUMBER_RATINGS"),
+                rs.getLong("NUMBER_PLAYED"));
         return level;
     }
 }

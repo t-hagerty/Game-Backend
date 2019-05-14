@@ -3,6 +3,7 @@ package com.example.demo;
 import javax.sql.DataSource;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -21,6 +22,7 @@ import java.sql.SQLException;
 public class JDBCUserDAOImpl implements JDBCUserDAO
 {
     @Autowired
+    @Qualifier("mysqlDataSource")
     private DataSource dataSource;
     private JdbcTemplate jdbcTemplate;
 
@@ -28,11 +30,6 @@ public class JDBCUserDAOImpl implements JDBCUserDAO
     public JDBCUserDAOImpl jdbcUserDAO()
     {
         return new JDBCUserDAOImpl();
-    }
-
-    public void setDataSource(DataSource dataSource)
-    {
-        this.dataSource = dataSource;
     }
 
     public Boolean insert(User user)

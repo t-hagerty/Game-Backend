@@ -19,6 +19,8 @@ public interface JDBCLevelDAO
     public float findRatingById(long id);
     public float findPercentWonById(long id);
     public Blob findLevelMapById(long id);
+    public Long findNumberRatingsById(long id);
+    public Long findNumberPlayedById(long id);
     public Boolean updateEntry(Level level, long id);
     public Boolean deleteById(long id);
 }
