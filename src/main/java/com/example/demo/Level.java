@@ -1,6 +1,7 @@
 package com.example.demo;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 
@@ -52,7 +53,6 @@ public class Level
         this.encodedMap = Base64.getEncoder().encodeToString(levelMap.getBytes(1, (int)levelMap.length()));
     }
 
-    @JsonValue
     @Override
     public String toString()
     {
@@ -129,6 +129,7 @@ public class Level
         this.percentWon = percentWon;
     }
 
+    @JsonIgnore
     public Blob getLevelMap()
     {
         return levelMap;
@@ -138,6 +139,8 @@ public class Level
     {
         this.levelMap = levelMap;
     }
+
+    public String getEncodedMap() { return encodedMap; }
 
     public long getNumberRatings() { return numberRatings; }
 
